@@ -2,5 +2,5 @@
    Ejemplo: 'https://tu-espacio.app.n8n.cloud/webhook'
    Vacía = modo demo: todo funciona en este navegador, sin Telegram. */
 window.AIA_CONFIG = {
-  api: '',
+  api: 'https://jonatans.app.n8n.cloud/webhook',
 };
