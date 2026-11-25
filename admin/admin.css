@@ -1,4 +1,5 @@
 :root{--black:#050507;--evox:#7026E8;--electric:#9636FF;--soft:#B783FF;--white:#fff;--muted:#8E8998;--text:#DCD6EA;--card:rgba(183,131,255,.08);--line:rgba(183,131,255,.18)}
+[hidden]{display:none !important}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Poppins,system-ui,sans-serif;background:var(--black);color:var(--text);min-height:100vh;line-height:1.5;background-image:radial-gradient(600px 400px at 100% 0,rgba(150,54,255,.18),transparent 70%),radial-gradient(500px 400px at 0 100%,rgba(112,38,232,.16),transparent 70%);background-attachment:fixed}
 h1,h2,h3{color:var(--white);line-height:1.2}
