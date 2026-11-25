@@ -5,7 +5,7 @@
 const WA = '573023647730';
 const wa = (msg) => `https://wa.me/${WA}?text=${encodeURIComponent(msg)}`;
 const LINKS = {
-  inscripcion: wa('Hola, quiero inscribirme en Campuslands AI Academy.'),
+  inscripcion: '#solicitud',
   whatsapp:    wa('Hola, quiero hablar con un especialista de AI Academy.'),
   certificado: 'https://campuslands.aiacademy.com.co/',
 };
@@ -106,7 +106,11 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 
 /* ---------- Enlaces reales en todos los botones */
-$$('[data-link]').forEach((a) => { const u = LINKS[a.dataset.link]; if (u) a.href = u; });
+$$('[data-link]').forEach((a) => {
+  const u = LINKS[a.dataset.link]; if (!u) return;
+  a.href = u;
+  if (u.startsWith('#')) { a.removeAttribute('target'); a.removeAttribute('rel'); }
+});
 $('#footerLinks').innerHTML = [
   ['Beneficios', '#beneficios'], ['Planes', '#planes'], ['FAQs', '#faqs'],
   ['Herramientas', '#herramientas'], ['Casos de uso', '#casos'], ['Certificado', LINKS.certificado], ...LEGAL,
@@ -218,7 +222,7 @@ $('#plans').innerHTML = CONTENT.plans.map((p) => `
     <h3>${esc(p.name)}</h3>
     <span class="hours">${esc(p.hours)}</span>
     <ul>${p.items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
-    <a class="btn btn-primary" href="${wa(`Hola, quiero inscribirme en la misión ${p.name} de AI Academy.`)}" target="_blank" rel="noopener">${esc(p.cta)}</a>
+    <a class="btn btn-primary" href="#solicitud" data-programa="${esc(p.name)}">${esc(p.cta)}</a>
   </article>`).join('');
 
 /* Carrusel de planes en móvil: puntos sincronizados con el desplazamiento */
@@ -256,7 +260,7 @@ function recommend() {
   const box = $('#recResult'); box.hidden = false;
   box.innerHTML = `<img src="assets/max-aprobando.webp" alt="" width="439" height="700" loading="lazy" decoding="async">
     <div><span class="pill">Tu misión</span><h3>${esc(p.name)} · ${esc(p.hours)}</h3><p class="why-pick">${esc(why)}</p>
-    <div class="cta-row"><a class="btn btn-primary" href="${wa(`Hola, el recomendador me sugirió la misión ${p.name}. Quiero inscribirme.`)}" target="_blank" rel="noopener">Inscribirme en ${esc(p.name)}</a>
+    <div class="cta-row"><a class="btn btn-primary" href="#solicitud" data-programa="${esc(p.name)}">Quiero ${esc(p.name)}</a>
     <a class="btn btn-ghost" href="#plan-${p.id}">Ver la misión</a></div></div>`;
   $$('.plan').forEach((el) => el.classList.toggle('match', el.id === `plan-${id}`));
   scrollToPlan(CONTENT.plans.findIndex((x) => x.id === id));
@@ -319,4 +323,52 @@ if (!CONTENT.faqs.length) $('#faqs').hidden = true;
   update();
   const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: .15 });
   $$('.reveal').forEach((el) => io.observe(el));
+})();
+
+
+/* ---------- Solicitud de información (Reto 4: registro + aviso por Telegram vía n8n) */
+(function leadForm() {
+  const form = $('#leadForm'); if (!form) return;
+  const sel = $('#f-programa');
+  sel.insertAdjacentHTML('beforeend', AIACore.PROGRAMAS.map((p) => `<option value="${esc(p)}">${esc(p === 'Aún no lo sé' ? p : 'Misión ' + p)}</option>`).join(''));
+  if (AIAApi.demo) $('#leadDemo').hidden = false;
+
+  // Cualquier botón con data-programa lleva al formulario con ese programa elegido
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('[data-programa]'); if (!a) return;
+    sel.value = a.dataset.programa;
+    setTimeout(() => $('#f-nombre').focus({ preventScroll: true }), 450);
+  });
+
+  const campos = ['nombre', 'correo', 'programa', 'telefono'];
+  const mostrar = (errores) => {
+    campos.concat('formulario').forEach((c) => {
+      const p = $('#e-' + c), input = form.elements[c], msg = errores[c] || '';
+      if (p) p.textContent = msg;
+      if (input && input.setAttribute) input.setAttribute('aria-invalid', String(!!msg));
+    });
+    const primero = campos.find((c) => errores[c]); if (primero) form.elements[primero].focus();
+  };
+  const leer = () => Object.fromEntries(['nombre', 'correo', 'programa', 'telefono', 'sitio_web'].map((c) => [c, form.elements[c].value]));
+
+  campos.forEach((c) => form.elements[c].addEventListener('blur', () => {
+    if (!form.elements[c].value && c !== 'programa') return;
+    const err = AIACore.validarRegistro(leer()).errores[c] || '';
+    $('#e-' + c).textContent = err; form.elements[c].setAttribute('aria-invalid', String(!!err));
+  }));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = leer();
+    const v = AIACore.validarRegistro(datos);
+    if (!v.ok) { mostrar(v.errores); return; }
+    mostrar({});
+    const btn = $('#leadSubmit'); btn.disabled = true; btn.textContent = 'Enviando…';
+    const r = await AIAApi.registrar(datos);
+    btn.disabled = false; btn.textContent = 'Enviar solicitud';
+    if (!r.ok) { mostrar(r.errores || { formulario: r.error || 'No pudimos enviar tu solicitud. Inténtalo de nuevo.' }); return; }
+    const ok = $('#leadOk');
+    ok.innerHTML = `<img src="assets/max-aprobando.webp" alt="" width="439" height="700"><div><strong>¡Listo, ${esc(v.datos.nombre.split(' ')[0])}!</strong><p>Recibimos tu solicitud para ${esc(v.datos.programa === 'Aún no lo sé' ? 'elegir tu misión' : 'la misión ' + v.datos.programa)}. Un especialista te escribirá a ${esc(v.datos.correo)} muy pronto.</p><p class="ref">Número de registro: ${esc(r.id)}</p></div>`;
+    ok.hidden = false; form.reset(); ok.focus();
+  });
 })();

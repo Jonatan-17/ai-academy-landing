@@ -1,0 +1,334 @@
+{
+  "name": "AI Academy · Registro de interesados y seguimiento",
+  "nodes": [
+    {
+      "name": "Nota · Cómo funciona",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -360
+      ],
+      "parameters": {
+        "width": 760,
+        "height": 250,
+        "color": 5,
+        "content": "## AI Academy · Registro de interesados y seguimiento\n**Formulario (arriba):** la landing envía los datos → se validan → si son válidos se guardan con estado *Nuevo* y se avisa por Telegram. Si un dato obligatorio es inválido, se responde con el error y **no** se guarda ni se avisa.\n\n**Panel (abajo):** el panel /admin consulta registros, cambia estados, añade notas y guarda el historial (qué, quién y cuándo).\n\nLos datos viven en el almacenamiento interno del flujo (static data). El token del bot va en la credencial de Telegram de n8n y las contraseñas de los administradores se guardan con hash; nada de eso está en este archivo."
+      },
+      "id": "87b308c1-504e-5677-6891-33289339a9d9"
+    },
+    {
+      "name": "Formulario · Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2d0fea84-cbbe-14a5-45bc-cbd4e2be54e7",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aia-registro",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "4d130fb4-fafe-d9c3-7b6e-7df415e0dfe3"
+    },
+    {
+      "name": "Validar y guardar registro",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const AIACore = (function () { const module = { exports: {} };\n/* Campuslands AI Academy · Lógica de registros y seguimiento.\n   El mismo código corre en n8n (nodos Code) y en el modo demo del navegador,\n   así ambos validan y guardan exactamente igual. */\n(function (root) {\n  'use strict';\n\n  const ESTADOS = ['Nuevo', 'Contactado', 'En seguimiento', 'Cerrado'];\n  const PROGRAMAS = ['Ignition', 'Booster', 'Liftoff', 'Odyssey', 'Nebula', 'Aún no lo sé'];\n\n  /* SHA-256 en JavaScript puro (sin dependencias, funciona en n8n Cloud y en el navegador) */\n  function sha256(ascii) {\n    const rr = (v, a) => (v >>> a) | (v << (32 - a));\n    const maxWord = 2 ** 32; let result = '';\n    const words = []; const bitLen = ascii.length * 8;\n    const hash = []; const k = [];\n    let primeCounter = 0; const isComposite = {};\n    for (let c = 2; primeCounter < 64; c++) {\n      if (!isComposite[c]) {\n        for (let i = 0; i < 313; i += c) isComposite[i] = c;\n        hash[primeCounter] = (c ** 0.5 * maxWord) | 0;\n        k[primeCounter++] = (c ** (1 / 3) * maxWord) | 0;\n      }\n    }\n    const bytes = unescape(encodeURIComponent(ascii));\n    let s = bytes + '\\x80';\n    while (s.length % 64 - 56) s += '\\x00';\n    for (let i = 0; i < s.length; i++) {\n      const j = s.charCodeAt(i);\n      words[i >> 2] |= j << ((3 - i) % 4) * 8;\n    }\n    const bl = bytes.length * 8;\n    words[words.length] = (bl / maxWord) | 0;\n    words[words.length] = bl;\n    let h = hash.slice(0, 8);\n    for (let j = 0; j < words.length;) {\n      const w = words.slice(j, (j += 16)); const old = h;\n      h = h.slice(0, 8);\n      for (let i = 0; i < 64; i++) {\n        const w15 = w[i - 15], w2 = w[i - 2];\n        const a = h[0], e = h[4];\n        const t1 = h[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & h[5]) ^ (~e & h[6])) + k[i] +\n          (w[i] = i < 16 ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);\n        const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & h[1]) ^ (a & h[2]) ^ (h[1] & h[2]));\n        h = [(t1 + t2) | 0].concat(h); h[4] = (h[4] + t1) | 0; h.length = 8;\n      }\n      for (let i = 0; i < 8; i++) h[i] = (h[i] + old[i]) | 0;\n    }\n    for (let i = 0; i < 8; i++) for (let j = 3; j + 1; j--) {\n      const b = (h[i] >> (j * 8)) & 255; result += (b < 16 ? '0' : '') + b.toString(16);\n    }\n    void bitLen; return result;\n  }\n\n  const limpiar = (v) => String(v == null ? '' : v).trim().replace(/\\s+/g, ' ');\n  const sal = () => Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');\n  const escHtml = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\n\n  function prepararDb(db) {\n    if (!Array.isArray(db.registros)) db.registros = [];\n    if (!Array.isArray(db.admins)) db.admins = [];\n    if (typeof db.secuencia !== 'number') db.secuencia = 0;\n    return db;\n  }\n\n  /* ---------- 01 · Formulario */\n  function validarRegistro(d) {\n    d = d || {};\n    const errores = {};\n    const nombre = limpiar(d.nombre);\n    const correo = limpiar(d.correo).toLowerCase();\n    const programa = limpiar(d.programa);\n    const telefono = String(d.telefono == null ? '' : d.telefono).replace(/[\\s().-]/g, '');\n    if (nombre.length < 3 || nombre.length > 80 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]*$/.test(nombre) || !/\\s/.test(nombre))\n      errores.nombre = 'Escribe tu nombre y apellido, solo con letras.';\n    if (correo.length > 120 || !/^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$/.test(correo))\n      errores.correo = 'Escribe un correo válido, por ejemplo nombre@empresa.com.';\n    if (!PROGRAMAS.includes(programa))\n      errores.programa = 'Elige un programa de la lista.';\n    if (telefono && !/^\\+?\\d{7,15}$/.test(telefono))\n      errores.telefono = 'El teléfono debe tener entre 7 y 15 dígitos.';\n    if (limpiar(d.sitio_web)) errores.formulario = 'No pudimos procesar la solicitud.'; // campo trampa para bots\n    return { ok: Object.keys(errores).length === 0, errores, datos: { nombre, correo, programa, telefono } };\n  }\n\n  function procesarRegistro(db, body, ahora) {\n    prepararDb(db);\n    const v = validarRegistro(body);\n    if (!v.ok) return { ok: false, errores: v.errores };\n    db.secuencia += 1;\n    const registro = {\n      id: 'AIA-' + String(db.secuencia).padStart(4, '0'),\n      fecha: ahora,\n      ...v.datos,\n      estado: 'Nuevo',\n      notas: [],\n      historial: [{ fecha: ahora, quien: 'Formulario web', accion: 'Registro creado', detalle: 'Estado inicial: Nuevo' }],\n    };\n    db.registros = db.registros.concat([registro]);\n    const lineas = [\n      '<b>🚀 Nueva solicitud de información · AI Academy</b>',\n      '',\n      `<b>Nombre:</b> ${escHtml(registro.nombre)}`,\n      `<b>Correo:</b> ${escHtml(registro.correo)}`,\n      `<b>Programa:</b> ${escHtml(registro.programa)}`,\n    ];\n    if (registro.telefono) lineas.push(`<b>Teléfono:</b> ${escHtml(registro.telefono)}`);\n    lineas.push('', `Registro ${registro.id} · Estado: Nuevo`);\n    return { ok: true, registro, mensaje: lineas.join('\\n') };\n  }\n\n  function anotarAviso(db, id, enviado, detalle, ahora) {\n    prepararDb(db);\n    db.registros = db.registros.map((r) => r.id !== id ? r : {\n      ...r,\n      historial: r.historial.concat([{ fecha: ahora, quien: 'n8n', accion: enviado ? 'Aviso enviado por Telegram' : 'Aviso por Telegram no enviado', detalle }]),\n    });\n  }\n\n  /* ---------- 03 · Panel de administración */\n  const publicoAdmin = (a) => ({ usuario: a.usuario, nombre: a.nombre });\n\n  function autenticar(db, usuario, clave) {\n    const u = limpiar(usuario).toLowerCase();\n    const a = db.admins.find((x) => x.usuario === u);\n    if (!a || a.hash !== sha256(a.sal + ':' + String(clave || ''))) return null;\n    return a;\n  }\n\n  function crearAdmin(db, { nombre, usuario, clave }) {\n    nombre = limpiar(nombre); usuario = limpiar(usuario).toLowerCase(); clave = String(clave || '');\n    if (nombre.length < 3) return 'Escribe el nombre del administrador.';\n    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return 'El usuario debe tener entre 3 y 30 caracteres, sin espacios.';\n    if (clave.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';\n    if (db.admins.some((x) => x.usuario === usuario)) return 'Ese usuario ya existe.';\n    const s = sal();\n    db.admins = db.admins.concat([{ nombre, usuario, sal: s, hash: sha256(s + ':' + clave) }]);\n    return null;\n  }\n\n  function procesarAdmin(db, body, ahora) {\n    prepararDb(db);\n    body = body || {};\n    const accion = body.accion;\n\n    if (accion === 'estado') return { ok: true, configurado: db.admins.length > 0 };\n\n    if (accion === 'configurar') {\n      if (db.admins.length > 0) return { ok: false, error: 'El panel ya está configurado.' };\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true };\n    }\n\n    const admin = autenticar(db, body.usuario, body.clave);\n    if (!admin) return { ok: false, error: 'Usuario o contraseña incorrectos.', auth: false };\n\n    if (accion === 'entrar') return { ok: true, admin: publicoAdmin(admin) };\n\n    if (accion === 'listar') {\n      const registros = db.registros.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));\n      return { ok: true, admin: publicoAdmin(admin), registros, estados: ESTADOS };\n    }\n\n    if (accion === 'actualizar') {\n      const r = db.registros.find((x) => x.id === body.id);\n      if (!r) return { ok: false, error: 'No encontramos ese registro.' };\n      const estado = limpiar(body.estado);\n      const nota = String(body.nota == null ? '' : body.nota).trim();\n      if (estado && !ESTADOS.includes(estado)) return { ok: false, error: 'Estado no válido.' };\n      if (nota.length > 1000) return { ok: false, error: 'La nota no puede superar 1000 caracteres.' };\n      const cambiaEstado = estado && estado !== r.estado;\n      if (!cambiaEstado && !nota) return { ok: false, error: 'No hay cambios para guardar.' };\n      const quien = `${admin.nombre} (${admin.usuario})`;\n      const historial = r.historial.slice(); const notas = r.notas.slice();\n      if (cambiaEstado) historial.push({ fecha: ahora, quien, accion: 'Cambio de estado', detalle: `${r.estado} → ${estado}` });\n      if (nota) { notas.push({ fecha: ahora, autor: quien, texto: nota }); historial.push({ fecha: ahora, quien, accion: 'Nota añadida', detalle: nota }); }\n      const actualizado = { ...r, estado: cambiaEstado ? estado : r.estado, notas, historial };\n      db.registros = db.registros.map((x) => (x.id === r.id ? actualizado : x));\n      return { ok: true, registro: actualizado };\n    }\n\n    if (accion === 'agregarAdmin') {\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true, admins: db.admins.map(publicoAdmin) };\n    }\n\n    if (accion === 'admins') return { ok: true, admins: db.admins.map(publicoAdmin) };\n\n    return { ok: false, error: 'Acción no reconocida.' };\n  }\n\n  function leerCuerpo(body) {\n    let b = body;\n    if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }\n    if (b && typeof b.payload === 'string') { try { b = JSON.parse(b.payload); } catch (e) { b = {}; } }\n    return b || {};\n  }\n\n  const api = { ESTADOS, PROGRAMAS, sha256, validarRegistro, procesarRegistro, anotarAviso, procesarAdmin, leerCuerpo };\n  if (typeof module !== 'undefined' && module.exports) module.exports = api;\n  else root.AIACore = api;\n})(typeof self !== 'undefined' ? self : this);\n\nreturn module.exports; })();\nconst db = $getWorkflowStaticData('global');\nconst body = AIACore.leerCuerpo($input.first().json.body);\nconst resultado = AIACore.procesarRegistro(db, body, new Date().toISOString());\nreturn [{ json: resultado }];"
+      },
+      "id": "7b9fc84e-10fe-05fc-f12c-7d84b073fee5"
+    },
+    {
+      "name": "¿Datos válidos?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "568feddb-fcb2-e691-aa0b-fc233aced70e",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2b22afff-5e0e-e763-214a-33180a25f679"
+    },
+    {
+      "name": "Avisar por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        -100
+      ],
+      "onError": "continueRegularOutput",
+      "parameters": {
+        "chatId": "TU_CHAT_ID",
+        "text": "={{ $json.mensaje }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "parse_mode": "HTML"
+        }
+      },
+      "id": "d393d930-243a-516a-04c1-5e1295fb3932"
+    },
+    {
+      "name": "Anotar aviso en historial",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        -100
+      ],
+      "parameters": {
+        "jsCode": "const AIACore = (function () { const module = { exports: {} };\n/* Campuslands AI Academy · Lógica de registros y seguimiento.\n   El mismo código corre en n8n (nodos Code) y en el modo demo del navegador,\n   así ambos validan y guardan exactamente igual. */\n(function (root) {\n  'use strict';\n\n  const ESTADOS = ['Nuevo', 'Contactado', 'En seguimiento', 'Cerrado'];\n  const PROGRAMAS = ['Ignition', 'Booster', 'Liftoff', 'Odyssey', 'Nebula', 'Aún no lo sé'];\n\n  /* SHA-256 en JavaScript puro (sin dependencias, funciona en n8n Cloud y en el navegador) */\n  function sha256(ascii) {\n    const rr = (v, a) => (v >>> a) | (v << (32 - a));\n    const maxWord = 2 ** 32; let result = '';\n    const words = []; const bitLen = ascii.length * 8;\n    const hash = []; const k = [];\n    let primeCounter = 0; const isComposite = {};\n    for (let c = 2; primeCounter < 64; c++) {\n      if (!isComposite[c]) {\n        for (let i = 0; i < 313; i += c) isComposite[i] = c;\n        hash[primeCounter] = (c ** 0.5 * maxWord) | 0;\n        k[primeCounter++] = (c ** (1 / 3) * maxWord) | 0;\n      }\n    }\n    const bytes = unescape(encodeURIComponent(ascii));\n    let s = bytes + '\\x80';\n    while (s.length % 64 - 56) s += '\\x00';\n    for (let i = 0; i < s.length; i++) {\n      const j = s.charCodeAt(i);\n      words[i >> 2] |= j << ((3 - i) % 4) * 8;\n    }\n    const bl = bytes.length * 8;\n    words[words.length] = (bl / maxWord) | 0;\n    words[words.length] = bl;\n    let h = hash.slice(0, 8);\n    for (let j = 0; j < words.length;) {\n      const w = words.slice(j, (j += 16)); const old = h;\n      h = h.slice(0, 8);\n      for (let i = 0; i < 64; i++) {\n        const w15 = w[i - 15], w2 = w[i - 2];\n        const a = h[0], e = h[4];\n        const t1 = h[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & h[5]) ^ (~e & h[6])) + k[i] +\n          (w[i] = i < 16 ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);\n        const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & h[1]) ^ (a & h[2]) ^ (h[1] & h[2]));\n        h = [(t1 + t2) | 0].concat(h); h[4] = (h[4] + t1) | 0; h.length = 8;\n      }\n      for (let i = 0; i < 8; i++) h[i] = (h[i] + old[i]) | 0;\n    }\n    for (let i = 0; i < 8; i++) for (let j = 3; j + 1; j--) {\n      const b = (h[i] >> (j * 8)) & 255; result += (b < 16 ? '0' : '') + b.toString(16);\n    }\n    void bitLen; return result;\n  }\n\n  const limpiar = (v) => String(v == null ? '' : v).trim().replace(/\\s+/g, ' ');\n  const sal = () => Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');\n  const escHtml = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\n\n  function prepararDb(db) {\n    if (!Array.isArray(db.registros)) db.registros = [];\n    if (!Array.isArray(db.admins)) db.admins = [];\n    if (typeof db.secuencia !== 'number') db.secuencia = 0;\n    return db;\n  }\n\n  /* ---------- 01 · Formulario */\n  function validarRegistro(d) {\n    d = d || {};\n    const errores = {};\n    const nombre = limpiar(d.nombre);\n    const correo = limpiar(d.correo).toLowerCase();\n    const programa = limpiar(d.programa);\n    const telefono = String(d.telefono == null ? '' : d.telefono).replace(/[\\s().-]/g, '');\n    if (nombre.length < 3 || nombre.length > 80 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]*$/.test(nombre) || !/\\s/.test(nombre))\n      errores.nombre = 'Escribe tu nombre y apellido, solo con letras.';\n    if (correo.length > 120 || !/^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$/.test(correo))\n      errores.correo = 'Escribe un correo válido, por ejemplo nombre@empresa.com.';\n    if (!PROGRAMAS.includes(programa))\n      errores.programa = 'Elige un programa de la lista.';\n    if (telefono && !/^\\+?\\d{7,15}$/.test(telefono))\n      errores.telefono = 'El teléfono debe tener entre 7 y 15 dígitos.';\n    if (limpiar(d.sitio_web)) errores.formulario = 'No pudimos procesar la solicitud.'; // campo trampa para bots\n    return { ok: Object.keys(errores).length === 0, errores, datos: { nombre, correo, programa, telefono } };\n  }\n\n  function procesarRegistro(db, body, ahora) {\n    prepararDb(db);\n    const v = validarRegistro(body);\n    if (!v.ok) return { ok: false, errores: v.errores };\n    db.secuencia += 1;\n    const registro = {\n      id: 'AIA-' + String(db.secuencia).padStart(4, '0'),\n      fecha: ahora,\n      ...v.datos,\n      estado: 'Nuevo',\n      notas: [],\n      historial: [{ fecha: ahora, quien: 'Formulario web', accion: 'Registro creado', detalle: 'Estado inicial: Nuevo' }],\n    };\n    db.registros = db.registros.concat([registro]);\n    const lineas = [\n      '<b>🚀 Nueva solicitud de información · AI Academy</b>',\n      '',\n      `<b>Nombre:</b> ${escHtml(registro.nombre)}`,\n      `<b>Correo:</b> ${escHtml(registro.correo)}`,\n      `<b>Programa:</b> ${escHtml(registro.programa)}`,\n    ];\n    if (registro.telefono) lineas.push(`<b>Teléfono:</b> ${escHtml(registro.telefono)}`);\n    lineas.push('', `Registro ${registro.id} · Estado: Nuevo`);\n    return { ok: true, registro, mensaje: lineas.join('\\n') };\n  }\n\n  function anotarAviso(db, id, enviado, detalle, ahora) {\n    prepararDb(db);\n    db.registros = db.registros.map((r) => r.id !== id ? r : {\n      ...r,\n      historial: r.historial.concat([{ fecha: ahora, quien: 'n8n', accion: enviado ? 'Aviso enviado por Telegram' : 'Aviso por Telegram no enviado', detalle }]),\n    });\n  }\n\n  /* ---------- 03 · Panel de administración */\n  const publicoAdmin = (a) => ({ usuario: a.usuario, nombre: a.nombre });\n\n  function autenticar(db, usuario, clave) {\n    const u = limpiar(usuario).toLowerCase();\n    const a = db.admins.find((x) => x.usuario === u);\n    if (!a || a.hash !== sha256(a.sal + ':' + String(clave || ''))) return null;\n    return a;\n  }\n\n  function crearAdmin(db, { nombre, usuario, clave }) {\n    nombre = limpiar(nombre); usuario = limpiar(usuario).toLowerCase(); clave = String(clave || '');\n    if (nombre.length < 3) return 'Escribe el nombre del administrador.';\n    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return 'El usuario debe tener entre 3 y 30 caracteres, sin espacios.';\n    if (clave.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';\n    if (db.admins.some((x) => x.usuario === usuario)) return 'Ese usuario ya existe.';\n    const s = sal();\n    db.admins = db.admins.concat([{ nombre, usuario, sal: s, hash: sha256(s + ':' + clave) }]);\n    return null;\n  }\n\n  function procesarAdmin(db, body, ahora) {\n    prepararDb(db);\n    body = body || {};\n    const accion = body.accion;\n\n    if (accion === 'estado') return { ok: true, configurado: db.admins.length > 0 };\n\n    if (accion === 'configurar') {\n      if (db.admins.length > 0) return { ok: false, error: 'El panel ya está configurado.' };\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true };\n    }\n\n    const admin = autenticar(db, body.usuario, body.clave);\n    if (!admin) return { ok: false, error: 'Usuario o contraseña incorrectos.', auth: false };\n\n    if (accion === 'entrar') return { ok: true, admin: publicoAdmin(admin) };\n\n    if (accion === 'listar') {\n      const registros = db.registros.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));\n      return { ok: true, admin: publicoAdmin(admin), registros, estados: ESTADOS };\n    }\n\n    if (accion === 'actualizar') {\n      const r = db.registros.find((x) => x.id === body.id);\n      if (!r) return { ok: false, error: 'No encontramos ese registro.' };\n      const estado = limpiar(body.estado);\n      const nota = String(body.nota == null ? '' : body.nota).trim();\n      if (estado && !ESTADOS.includes(estado)) return { ok: false, error: 'Estado no válido.' };\n      if (nota.length > 1000) return { ok: false, error: 'La nota no puede superar 1000 caracteres.' };\n      const cambiaEstado = estado && estado !== r.estado;\n      if (!cambiaEstado && !nota) return { ok: false, error: 'No hay cambios para guardar.' };\n      const quien = `${admin.nombre} (${admin.usuario})`;\n      const historial = r.historial.slice(); const notas = r.notas.slice();\n      if (cambiaEstado) historial.push({ fecha: ahora, quien, accion: 'Cambio de estado', detalle: `${r.estado} → ${estado}` });\n      if (nota) { notas.push({ fecha: ahora, autor: quien, texto: nota }); historial.push({ fecha: ahora, quien, accion: 'Nota añadida', detalle: nota }); }\n      const actualizado = { ...r, estado: cambiaEstado ? estado : r.estado, notas, historial };\n      db.registros = db.registros.map((x) => (x.id === r.id ? actualizado : x));\n      return { ok: true, registro: actualizado };\n    }\n\n    if (accion === 'agregarAdmin') {\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true, admins: db.admins.map(publicoAdmin) };\n    }\n\n    if (accion === 'admins') return { ok: true, admins: db.admins.map(publicoAdmin) };\n\n    return { ok: false, error: 'Acción no reconocida.' };\n  }\n\n  function leerCuerpo(body) {\n    let b = body;\n    if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }\n    if (b && typeof b.payload === 'string') { try { b = JSON.parse(b.payload); } catch (e) { b = {}; } }\n    return b || {};\n  }\n\n  const api = { ESTADOS, PROGRAMAS, sha256, validarRegistro, procesarRegistro, anotarAviso, procesarAdmin, leerCuerpo };\n  if (typeof module !== 'undefined' && module.exports) module.exports = api;\n  else root.AIACore = api;\n})(typeof self !== 'undefined' ? self : this);\n\nreturn module.exports; })();\nconst db = $getWorkflowStaticData('global');\nconst registro = $('Validar y guardar registro').first().json.registro;\nconst t = $input.first().json || {};\nconst msg = t.result || t;\nconst enviado = !t.error && !!(msg && msg.message_id);\nconst detalle = enviado ? 'Mensaje ' + msg.message_id + ' en el chat de seguimiento' : String((t.error && t.error.message) || t.error || 'Sin respuesta de Telegram');\nAIACore.anotarAviso(db, registro.id, enviado, detalle, new Date().toISOString());\nreturn [{ json: { ok: true, id: registro.id, avisoEnviado: enviado } }];"
+      },
+      "id": "bf558a15-4415-fe4a-6f96-833d711525e2"
+    },
+    {
+      "name": "Responder registro creado",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        -100
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, id: $json.id }) }}",
+        "options": {
+          "responseCode": 201,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e9c45a5f-b280-aa9e-af33-df678a75d90c"
+    },
+    {
+      "name": "Responder datos inválidos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        680,
+        120
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, errores: $json.errores }) }}",
+        "options": {
+          "responseCode": 422,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "1e4b31d3-1f8f-7568-0279-85a627043ac1"
+    },
+    {
+      "name": "Panel · Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        360
+      ],
+      "webhookId": "7ea7a598-b6ed-dcd2-5cb4-1523c13ca684",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aia-admin",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "1f1afadb-beb2-bc3d-471d-f778e5e218c5"
+    },
+    {
+      "name": "Procesar acción del panel",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        360
+      ],
+      "parameters": {
+        "jsCode": "const AIACore = (function () { const module = { exports: {} };\n/* Campuslands AI Academy · Lógica de registros y seguimiento.\n   El mismo código corre en n8n (nodos Code) y en el modo demo del navegador,\n   así ambos validan y guardan exactamente igual. */\n(function (root) {\n  'use strict';\n\n  const ESTADOS = ['Nuevo', 'Contactado', 'En seguimiento', 'Cerrado'];\n  const PROGRAMAS = ['Ignition', 'Booster', 'Liftoff', 'Odyssey', 'Nebula', 'Aún no lo sé'];\n\n  /* SHA-256 en JavaScript puro (sin dependencias, funciona en n8n Cloud y en el navegador) */\n  function sha256(ascii) {\n    const rr = (v, a) => (v >>> a) | (v << (32 - a));\n    const maxWord = 2 ** 32; let result = '';\n    const words = []; const bitLen = ascii.length * 8;\n    const hash = []; const k = [];\n    let primeCounter = 0; const isComposite = {};\n    for (let c = 2; primeCounter < 64; c++) {\n      if (!isComposite[c]) {\n        for (let i = 0; i < 313; i += c) isComposite[i] = c;\n        hash[primeCounter] = (c ** 0.5 * maxWord) | 0;\n        k[primeCounter++] = (c ** (1 / 3) * maxWord) | 0;\n      }\n    }\n    const bytes = unescape(encodeURIComponent(ascii));\n    let s = bytes + '\\x80';\n    while (s.length % 64 - 56) s += '\\x00';\n    for (let i = 0; i < s.length; i++) {\n      const j = s.charCodeAt(i);\n      words[i >> 2] |= j << ((3 - i) % 4) * 8;\n    }\n    const bl = bytes.length * 8;\n    words[words.length] = (bl / maxWord) | 0;\n    words[words.length] = bl;\n    let h = hash.slice(0, 8);\n    for (let j = 0; j < words.length;) {\n      const w = words.slice(j, (j += 16)); const old = h;\n      h = h.slice(0, 8);\n      for (let i = 0; i < 64; i++) {\n        const w15 = w[i - 15], w2 = w[i - 2];\n        const a = h[0], e = h[4];\n        const t1 = h[7] + (rr(e, 6) ^ rr(e, 11) ^ rr(e, 25)) + ((e & h[5]) ^ (~e & h[6])) + k[i] +\n          (w[i] = i < 16 ? w[i] : (w[i - 16] + (rr(w15, 7) ^ rr(w15, 18) ^ (w15 >>> 3)) + w[i - 7] + (rr(w2, 17) ^ rr(w2, 19) ^ (w2 >>> 10))) | 0);\n        const t2 = (rr(a, 2) ^ rr(a, 13) ^ rr(a, 22)) + ((a & h[1]) ^ (a & h[2]) ^ (h[1] & h[2]));\n        h = [(t1 + t2) | 0].concat(h); h[4] = (h[4] + t1) | 0; h.length = 8;\n      }\n      for (let i = 0; i < 8; i++) h[i] = (h[i] + old[i]) | 0;\n    }\n    for (let i = 0; i < 8; i++) for (let j = 3; j + 1; j--) {\n      const b = (h[i] >> (j * 8)) & 255; result += (b < 16 ? '0' : '') + b.toString(16);\n    }\n    void bitLen; return result;\n  }\n\n  const limpiar = (v) => String(v == null ? '' : v).trim().replace(/\\s+/g, ' ');\n  const sal = () => Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('');\n  const escHtml = (t) => String(t).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));\n\n  function prepararDb(db) {\n    if (!Array.isArray(db.registros)) db.registros = [];\n    if (!Array.isArray(db.admins)) db.admins = [];\n    if (typeof db.secuencia !== 'number') db.secuencia = 0;\n    return db;\n  }\n\n  /* ---------- 01 · Formulario */\n  function validarRegistro(d) {\n    d = d || {};\n    const errores = {};\n    const nombre = limpiar(d.nombre);\n    const correo = limpiar(d.correo).toLowerCase();\n    const programa = limpiar(d.programa);\n    const telefono = String(d.telefono == null ? '' : d.telefono).replace(/[\\s().-]/g, '');\n    if (nombre.length < 3 || nombre.length > 80 || !/^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ' .-]*$/.test(nombre) || !/\\s/.test(nombre))\n      errores.nombre = 'Escribe tu nombre y apellido, solo con letras.';\n    if (correo.length > 120 || !/^[^\\s@]+@[^\\s@]+\\.[A-Za-z]{2,}$/.test(correo))\n      errores.correo = 'Escribe un correo válido, por ejemplo nombre@empresa.com.';\n    if (!PROGRAMAS.includes(programa))\n      errores.programa = 'Elige un programa de la lista.';\n    if (telefono && !/^\\+?\\d{7,15}$/.test(telefono))\n      errores.telefono = 'El teléfono debe tener entre 7 y 15 dígitos.';\n    if (limpiar(d.sitio_web)) errores.formulario = 'No pudimos procesar la solicitud.'; // campo trampa para bots\n    return { ok: Object.keys(errores).length === 0, errores, datos: { nombre, correo, programa, telefono } };\n  }\n\n  function procesarRegistro(db, body, ahora) {\n    prepararDb(db);\n    const v = validarRegistro(body);\n    if (!v.ok) return { ok: false, errores: v.errores };\n    db.secuencia += 1;\n    const registro = {\n      id: 'AIA-' + String(db.secuencia).padStart(4, '0'),\n      fecha: ahora,\n      ...v.datos,\n      estado: 'Nuevo',\n      notas: [],\n      historial: [{ fecha: ahora, quien: 'Formulario web', accion: 'Registro creado', detalle: 'Estado inicial: Nuevo' }],\n    };\n    db.registros = db.registros.concat([registro]);\n    const lineas = [\n      '<b>🚀 Nueva solicitud de información · AI Academy</b>',\n      '',\n      `<b>Nombre:</b> ${escHtml(registro.nombre)}`,\n      `<b>Correo:</b> ${escHtml(registro.correo)}`,\n      `<b>Programa:</b> ${escHtml(registro.programa)}`,\n    ];\n    if (registro.telefono) lineas.push(`<b>Teléfono:</b> ${escHtml(registro.telefono)}`);\n    lineas.push('', `Registro ${registro.id} · Estado: Nuevo`);\n    return { ok: true, registro, mensaje: lineas.join('\\n') };\n  }\n\n  function anotarAviso(db, id, enviado, detalle, ahora) {\n    prepararDb(db);\n    db.registros = db.registros.map((r) => r.id !== id ? r : {\n      ...r,\n      historial: r.historial.concat([{ fecha: ahora, quien: 'n8n', accion: enviado ? 'Aviso enviado por Telegram' : 'Aviso por Telegram no enviado', detalle }]),\n    });\n  }\n\n  /* ---------- 03 · Panel de administración */\n  const publicoAdmin = (a) => ({ usuario: a.usuario, nombre: a.nombre });\n\n  function autenticar(db, usuario, clave) {\n    const u = limpiar(usuario).toLowerCase();\n    const a = db.admins.find((x) => x.usuario === u);\n    if (!a || a.hash !== sha256(a.sal + ':' + String(clave || ''))) return null;\n    return a;\n  }\n\n  function crearAdmin(db, { nombre, usuario, clave }) {\n    nombre = limpiar(nombre); usuario = limpiar(usuario).toLowerCase(); clave = String(clave || '');\n    if (nombre.length < 3) return 'Escribe el nombre del administrador.';\n    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) return 'El usuario debe tener entre 3 y 30 caracteres, sin espacios.';\n    if (clave.length < 8) return 'La contraseña debe tener al menos 8 caracteres.';\n    if (db.admins.some((x) => x.usuario === usuario)) return 'Ese usuario ya existe.';\n    const s = sal();\n    db.admins = db.admins.concat([{ nombre, usuario, sal: s, hash: sha256(s + ':' + clave) }]);\n    return null;\n  }\n\n  function procesarAdmin(db, body, ahora) {\n    prepararDb(db);\n    body = body || {};\n    const accion = body.accion;\n\n    if (accion === 'estado') return { ok: true, configurado: db.admins.length > 0 };\n\n    if (accion === 'configurar') {\n      if (db.admins.length > 0) return { ok: false, error: 'El panel ya está configurado.' };\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true };\n    }\n\n    const admin = autenticar(db, body.usuario, body.clave);\n    if (!admin) return { ok: false, error: 'Usuario o contraseña incorrectos.', auth: false };\n\n    if (accion === 'entrar') return { ok: true, admin: publicoAdmin(admin) };\n\n    if (accion === 'listar') {\n      const registros = db.registros.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));\n      return { ok: true, admin: publicoAdmin(admin), registros, estados: ESTADOS };\n    }\n\n    if (accion === 'actualizar') {\n      const r = db.registros.find((x) => x.id === body.id);\n      if (!r) return { ok: false, error: 'No encontramos ese registro.' };\n      const estado = limpiar(body.estado);\n      const nota = String(body.nota == null ? '' : body.nota).trim();\n      if (estado && !ESTADOS.includes(estado)) return { ok: false, error: 'Estado no válido.' };\n      if (nota.length > 1000) return { ok: false, error: 'La nota no puede superar 1000 caracteres.' };\n      const cambiaEstado = estado && estado !== r.estado;\n      if (!cambiaEstado && !nota) return { ok: false, error: 'No hay cambios para guardar.' };\n      const quien = `${admin.nombre} (${admin.usuario})`;\n      const historial = r.historial.slice(); const notas = r.notas.slice();\n      if (cambiaEstado) historial.push({ fecha: ahora, quien, accion: 'Cambio de estado', detalle: `${r.estado} → ${estado}` });\n      if (nota) { notas.push({ fecha: ahora, autor: quien, texto: nota }); historial.push({ fecha: ahora, quien, accion: 'Nota añadida', detalle: nota }); }\n      const actualizado = { ...r, estado: cambiaEstado ? estado : r.estado, notas, historial };\n      db.registros = db.registros.map((x) => (x.id === r.id ? actualizado : x));\n      return { ok: true, registro: actualizado };\n    }\n\n    if (accion === 'agregarAdmin') {\n      const e = crearAdmin(db, body.nuevo || {});\n      return e ? { ok: false, error: e } : { ok: true, admins: db.admins.map(publicoAdmin) };\n    }\n\n    if (accion === 'admins') return { ok: true, admins: db.admins.map(publicoAdmin) };\n\n    return { ok: false, error: 'Acción no reconocida.' };\n  }\n\n  function leerCuerpo(body) {\n    let b = body;\n    if (typeof b === 'string') { try { b = JSON.parse(b); } catch (e) { b = {}; } }\n    if (b && typeof b.payload === 'string') { try { b = JSON.parse(b.payload); } catch (e) { b = {}; } }\n    return b || {};\n  }\n\n  const api = { ESTADOS, PROGRAMAS, sha256, validarRegistro, procesarRegistro, anotarAviso, procesarAdmin, leerCuerpo };\n  if (typeof module !== 'undefined' && module.exports) module.exports = api;\n  else root.AIACore = api;\n})(typeof self !== 'undefined' ? self : this);\n\nreturn module.exports; })();\nconst db = $getWorkflowStaticData('global');\nconst body = AIACore.leerCuerpo($input.first().json.body);\nreturn [{ json: AIACore.procesarAdmin(db, body, new Date().toISOString()) }];"
+      },
+      "id": "58a20678-6bee-be00-697d-f743b80d59a8"
+    },
+    {
+      "name": "Responder al panel",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        360
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              }
+            ]
+          }
+        }
+      },
+      "id": "87469541-b39d-8a1b-ae0a-b43c6e88dd0b"
+    },
+    {
+      "name": "Nota · Telegram",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        620,
+        -320
+      ],
+      "parameters": {
+        "width": 300,
+        "height": 180,
+        "color": 4,
+        "content": "### Configurar el aviso\n1. Crea la credencial **Telegram** con el token de tu bot.\n2. Cambia `TU_CHAT_ID` por el ID de tu chat privado de prueba."
+      },
+      "id": "e058aa2c-6100-7fba-e14a-64592c5dbfa2"
+    }
+  ],
+  "connections": {
+    "Formulario · Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validar y guardar registro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar y guardar registro": {
+      "main": [
+        [
+          {
+            "node": "¿Datos válidos?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Datos válidos?": {
+      "main": [
+        [
+          {
+            "node": "Avisar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder datos inválidos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Avisar por Telegram": {
+      "main": [
+        [
+          {
+            "node": "Anotar aviso en historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anotar aviso en historial": {
+      "main": [
+        [
+          {
+            "node": "Responder registro creado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Panel · Webhook": {
+      "main": [
+        [
+          {
+            "node": "Procesar acción del panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar acción del panel": {
+      "main": [
+        [
+          {
+            "node": "Responder al panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true
+  },
+  "tags": []
+}

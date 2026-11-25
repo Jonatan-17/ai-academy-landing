@@ -193,6 +193,53 @@
       </div>
     </section>
 
+    <!-- 08 · SOLICITUD DE INFORMACIÓN -->
+    <section class="section" id="solicitud" data-stage="Contacto">
+      <div class="halo halo-tr soft" aria-hidden="true"></div>
+      <div class="wrap lead-grid">
+        <div class="lead-copy">
+          <p class="phase">Fase 08 · Contacto</p>
+          <h2>Solicita <span class="hl">información</span></h2>
+          <p class="sub">Déjanos tus datos y un especialista te contacta para ayudarte a elegir tu misión.</p>
+          <ul class="lead-points">
+            <li>Te asesora un especialista de AI Academy</li>
+            <li>Te ayudamos a elegir la misión adecuada</li>
+            <li>Sin compromiso</li>
+          </ul>
+        </div>
+        <form class="lead-form" id="leadForm" novalidate>
+          <div class="field">
+            <label for="f-nombre">Nombre completo <span class="req" aria-hidden="true">*</span></label>
+            <input id="f-nombre" name="nombre" type="text" autocomplete="name" maxlength="80" required aria-describedby="e-nombre">
+            <p class="err" id="e-nombre"></p>
+          </div>
+          <div class="field">
+            <label for="f-correo">Correo electrónico <span class="req" aria-hidden="true">*</span></label>
+            <input id="f-correo" name="correo" type="email" inputmode="email" autocomplete="email" maxlength="120" required aria-describedby="e-correo">
+            <p class="err" id="e-correo"></p>
+          </div>
+          <div class="field">
+            <label for="f-programa">Programa de interés <span class="req" aria-hidden="true">*</span></label>
+            <select id="f-programa" name="programa" required aria-describedby="e-programa">
+              <option value="">Elige un programa</option>
+            </select>
+            <p class="err" id="e-programa"></p>
+          </div>
+          <div class="field">
+            <label for="f-telefono">Teléfono <span class="opt">(opcional)</span></label>
+            <input id="f-telefono" name="telefono" type="tel" inputmode="tel" autocomplete="tel" maxlength="20" aria-describedby="e-telefono">
+            <p class="err" id="e-telefono"></p>
+          </div>
+          <div class="hp" aria-hidden="true"><label>Sitio web <input name="sitio_web" tabindex="-1" autocomplete="off"></label></div>
+          <p class="err form-err" id="e-formulario" role="alert"></p>
+          <button class="btn btn-primary" type="submit" id="leadSubmit">Enviar solicitud</button>
+          <p class="form-note">Usamos tus datos solo para contactarte sobre AI Academy. Los campos con * son obligatorios.</p>
+          <p class="form-demo" id="leadDemo" hidden>Vista de demostración: los datos se guardan solo en este navegador.</p>
+          <div class="form-ok" id="leadOk" role="status" tabindex="-1" hidden></div>
+        </form>
+      </div>
+    </section>
+
     <!-- CTA final -->
     <section class="section">
       <div class="wrap">
@@ -229,6 +276,9 @@
     </a>
   </div>
 
+  <script src="config.js" defer></script>
+  <script src="core.js" defer></script>
+  <script src="api.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>

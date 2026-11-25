@@ -19,6 +19,12 @@ index.html   Estructura y contenido base
 styles.css   Sistema visual del manual de marca y diseño responsive (móvil primero)
 app.js       Datos de la página (planes, herramientas, casos, FAQs) e interacciones
 assets/      Logos, casco y poses aprobadas de Max en WebP
+core.js      Validación, estados e historial (compartido con n8n)        ┐
+api.js       Conexión con los webhooks de n8n o modo demo                │
+config.js    URL pública de los webhooks                                 │ Reto 4
+admin/       Panel de administración                                     │ (ver RETO4.md)
+n8n/         Flujo de n8n exportado en JSON                              │
+tools/       Script que genera el flujo a partir de core.js              ┘
 ```
 
 Todo el contenido editable está en el objeto `CONTENT` y en `LINKS`, al inicio de `app.js`. Para agregar una herramienta, un plan o una pregunta basta con añadir una línea.
@@ -39,14 +45,15 @@ Todo el contenido editable está en el objeto `CONTENT` y en `LINKS`, al inicio 
 - Se retiró la cita atribuida a Charles Darwin del hero: no aparece en su obra (es una paráfrasis de Leon C. Megginson, 1963). En su lugar, el hero habla directo al visitante y le pregunta quién es.
 
 **Conversión**
-- Todos los botones «Inscríbete» abren WhatsApp con un mensaje listo que incluye el plan elegido, para que el asesor sepa desde el primer mensaje qué busca la persona.
+- Todos los botones «Inscríbete» llevan al formulario «Solicita información» con el plan ya elegido. Cada solicitud queda registrada, llega como aviso por Telegram y se sigue desde el panel (ver `RETO4.md`).
+- WhatsApp queda como canal directo con un mensaje listo para escribir.
 - Barra fija con «Inscríbete» y WhatsApp que aparece al pasar el hero, siempre al alcance del pulgar en móvil.
 
 ## Interacciones
 
 1. **Hero que reacciona.** El visitante elige su perfil (empresa, líder de equipo o independiente) y el mensaje cambia con una recomendación. Max sigue el puntero o la inclinación del teléfono, sobre un campo de estrellas en canvas que se pausa cuando no está en pantalla.
 2. **Recorrido narrativo.** La página es una misión: Despegue → Propulsión → Instrumentos → Ruta → Órbita → Aterrizaje → Bitácora. Un indicador lateral (barra superior en móvil) marca la fase actual y el progreso, y los bloques aparecen al entrar en pantalla.
-3. **Recomendador de misión.** Tres preguntas (tamaño del equipo, tiempo y objetivo) llevan al plan adecuado, resaltan su tarjeta y ofrecen inscribirse en ese plan por WhatsApp. Al elegir perfil en el hero, la primera respuesta se completa sola.
+3. **Recomendador de misión.** Tres preguntas (tamaño del equipo, tiempo y objetivo) llevan al plan adecuado, resaltan su tarjeta y abren el formulario con ese plan elegido. Al elegir perfil en el hero, la primera respuesta se completa sola.
 4. **Constelación de herramientas.** Las herramientas orbitan alrededor del casco; al tocar cada una se abre su ficha con lo que se aprende a hacer.
 5. **Antes y después.** Pestañas por perfil y un control deslizante que revela la transformación de cada rol.
 
@@ -54,7 +61,7 @@ En móvil, los planes pasan a un carrusel con desplazamiento por tarjeta e indic
 
 ## Accesibilidad y rendimiento
 
-- Sin dependencias: solo tres archivos y las imágenes en WebP (unos 260 KB en total).
+- Sin dependencias ni frameworks; las imágenes van en WebP (unos 260 KB en total).
 - Navegación completa con teclado: grupos de opciones con flechas, pestañas, foco visible y enlace para saltar al contenido.
 - Respeta `prefers-reduced-motion`: sin animaciones ni paralaje para quien lo pida.
 - Imágenes con dimensiones declaradas, carga diferida fuera del hero y textos alternativos.

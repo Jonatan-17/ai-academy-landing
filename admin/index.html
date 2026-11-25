@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Panel de seguimiento · Campuslands AI Academy</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#050507">
+  <link rel="icon" href="../assets/favicon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="bar">
+    <a href="../" class="brand"><img src="../assets/logo-horizontal-blanco.webp" alt="Campuslands AI Academy" width="160" height="36"></a>
+    <span class="bar-title">Panel de seguimiento</span>
+    <div class="who" id="who" hidden>
+      <span id="whoName"></span>
+      <button type="button" class="btn ghost sm" id="btnAdmins">Administradores</button>
+      <button type="button" class="btn ghost sm" id="btnSalir">Salir</button>
+    </div>
+  </header>
+  <p class="demo-banner" id="demoBanner" hidden>Modo demo: el panel está leyendo los datos guardados en este navegador. Con n8n conectado, todos los administradores ven la misma información.</p>
+
+  <main>
+    <!-- Primera configuración -->
+    <section class="auth" id="vSetup" hidden>
+      <h1>Configura el panel</h1>
+      <p>Crea la primera cuenta de administrador. La contraseña se guarda cifrada dentro de n8n, no en los archivos del proyecto.</p>
+      <form id="fSetup" class="stack" novalidate>
+        <label>Nombre<input name="nombre" autocomplete="name" required></label>
+        <label>Usuario<input name="usuario" autocomplete="username" autocapitalize="none" required></label>
+        <label>Contraseña (mínimo 8 caracteres)<input name="clave" type="password" autocomplete="new-password" required></label>
+        <p class="msg" role="alert"></p>
+        <button class="btn primary" type="submit">Crear administrador</button>
+      </form>
+    </section>
+
+    <!-- Ingreso -->
+    <section class="auth" id="vLogin" hidden>
+      <h1>Ingresa al panel</h1>
+      <p>Acceso solo para el equipo de AI Academy.</p>
+      <form id="fLogin" class="stack" novalidate>
+        <label>Usuario<input name="usuario" autocomplete="username" autocapitalize="none" required></label>
+        <label>Contraseña<input name="clave" type="password" autocomplete="current-password" required></label>
+        <p class="msg" role="alert"></p>
+        <button class="btn primary" type="submit">Ingresar</button>
+      </form>
+    </section>
+
+    <!-- Registros -->
+    <section id="vPanel" hidden>
+      <div class="toolbar">
+        <div class="filters" role="tablist" aria-label="Filtrar por estado" id="filters"></div>
+        <div class="tools">
+          <input type="search" id="q" placeholder="Buscar por nombre, correo o número" aria-label="Buscar registros">
+          <button type="button" class="btn ghost" id="btnRefrescar">Actualizar</button>
+        </div>
+      </div>
+      <div class="layout">
+        <div class="list" id="list" aria-live="polite"></div>
+        <aside class="detail" id="detail" aria-live="polite">
+          <p class="empty">Elige un registro para ver sus datos, cambiar su estado y añadir notas.</p>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="dlgAdmins">
+    <form method="dialog" class="dlg-head"><h2>Administradores</h2><button class="btn ghost sm" aria-label="Cerrar">Cerrar</button></form>
+    <ul id="adminList" class="admin-list"></ul>
+    <form id="fAdmin" class="stack" novalidate>
+      <h3>Agregar administrador</h3>
+      <label>Nombre<input name="nombre" required></label>
+      <label>Usuario<input name="usuario" autocapitalize="none" required></label>
+      <label>Contraseña (mínimo 8 caracteres)<input name="clave" type="password" autocomplete="new-password" required></label>
+      <p class="msg" role="alert"></p>
+      <button class="btn primary" type="submit">Agregar</button>
+    </form>
+  </dialog>
+
+  <script src="../config.js"></script>
+  <script src="../core.js"></script>
+  <script src="../api.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
