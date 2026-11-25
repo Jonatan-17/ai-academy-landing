@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campuslands AI Academy · Formación en IA aplicada para empresas, equipos y personas</title>
+  <meta name="description" content="Campuslands AI Academy forma a empresas, equipos y profesionales en inteligencia artificial aplicada. Elige tu misión: Ignition, Booster, Liftoff, Odyssey o Nebula.">
+  <meta name="theme-color" content="#050507">
+  <link rel="icon" href="assets/favicon.png" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap">
+  <link rel="preload" as="image" href="assets/max-presentando.webp" type="image/webp">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+
+  <!-- Menú fijo -->
+  <header class="topbar" id="topbar">
+    <a class="brand" href="#inicio" aria-label="Campuslands AI Academy, ir al inicio">
+      <img src="assets/logo-horizontal-blanco.webp" alt="Campuslands AI Academy" width="180" height="41">
+    </a>
+    <button class="menu-btn" id="menuBtn" aria-expanded="false" aria-controls="menu">
+      <span class="sr">Abrir menú</span><span class="bars" aria-hidden="true"></span>
+    </button>
+    <nav class="menu" id="menu" aria-label="Secciones">
+      <a href="#beneficios">Beneficios</a>
+      <a href="#herramientas">Herramientas</a>
+      <a href="#planes">Planes</a>
+      <a href="#por-que-ahora">¿Por qué ahora?</a>
+      <a href="#casos">Casos de uso</a>
+      <a href="#faqs">FAQs</a>
+      <a data-link="certificado" href="#" target="_blank" rel="noopener">Certificado</a>
+      <a class="btn btn-primary btn-sm" data-link="inscripcion" href="#" target="_blank" rel="noopener">Inscríbete</a>
+    </nav>
+  </header>
+
+  <!-- Indicador del viaje (recorrido narrativo) -->
+  <aside class="journey" aria-label="Progreso de la misión">
+    <div class="journey-track"><div class="journey-fill" id="journeyFill"></div></div>
+    <ol class="journey-steps" id="journeySteps"></ol>
+  </aside>
+  <div class="journey-mobile" aria-hidden="true"><div id="journeyMobileFill"></div></div>
+
+  <main id="contenido">
+
+    <!-- 01 · HERO -->
+    <section class="hero" id="inicio" data-stage="Despegue">
+      <canvas class="stars" id="stars" aria-hidden="true"></canvas>
+      <div class="halo halo-tr" aria-hidden="true"></div>
+      <div class="halo halo-bl" aria-hidden="true"></div>
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <span class="pill">Formación en IA aplicada</span>
+          <h1>Evoluciona a la velocidad de la <span class="hl">tecnología</span></h1>
+          <p class="lead">En Campuslands AI Academy formamos empresas, equipos y personas para que pasen de usar herramientas de IA a integrarlas en su trabajo.</p>
+          <fieldset class="who" id="who">
+            <legend>¿Quién eres?</legend>
+            <div class="chips" role="radiogroup">
+              <button type="button" class="chip" role="radio" aria-checked="false" data-who="empresa">Empresa</button>
+              <button type="button" class="chip" role="radio" aria-checked="false" data-who="lider">Líder de equipo</button>
+              <button type="button" class="chip" role="radio" aria-checked="false" data-who="independiente">Independiente</button>
+            </div>
+            <p class="who-msg" id="whoMsg" aria-live="polite">Elige tu perfil y te mostramos por dónde empezar.</p>
+          </fieldset>
+          <div class="cta-row">
+            <a class="btn btn-primary" href="#planes">Ver planes</a>
+            <a class="btn btn-ghost" data-link="whatsapp" href="#" target="_blank" rel="noopener">Habla con un especialista</a>
+          </div>
+        </div>
+        <div class="hero-visual" id="heroVisual" aria-hidden="true">
+          <div class="orbit orbit-1"></div><div class="orbit orbit-2"></div>
+          <img class="max" id="heroMax" src="assets/max-presentando.webp" alt="" width="447" height="700" fetchpriority="high">
+        </div>
+      </div>
+      <a class="scroll-hint" href="#beneficios">Inicia el recorrido <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <!-- 02 · BENEFICIOS -->
+    <section class="section" id="beneficios" data-stage="Propulsión">
+      <div class="wrap">
+        <p class="phase">Fase 02 · Propulsión</p>
+        <h2>Lo que te llevas en cada <span class="hl">misión</span></h2>
+        <div class="cards cards-4" id="benefitCards"></div>
+      </div>
+    </section>
+
+    <!-- 03 · HERRAMIENTAS (exploración libre) -->
+    <section class="section" id="herramientas" data-stage="Instrumentos">
+      <div class="halo halo-tr soft" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="phase">Fase 03 · Instrumentos de vuelo</p>
+        <h2>Las herramientas de IA que vas a <span class="hl">dominar</span></h2>
+        <p class="sub">Explora la constelación: toca cada herramienta para ver qué aprendes a hacer con ella.</p>
+        <div class="constellation-wrap">
+          <div class="constellation" id="constellation" role="list"></div>
+          <div class="tool-card" id="toolCard" aria-live="polite">
+            <p class="tool-hint">Toca una estrella para abrir su ficha.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 · PLANES + RECOMENDADOR -->
+    <section class="section" id="planes" data-stage="Ruta">
+      <div class="wrap">
+        <p class="phase">Fase 04 · Ruta de vuelo</p>
+        <h2>Elige tu <span class="hl">misión</span></h2>
+        <p class="sub">Cinco rutas de formación, según el tiempo y el objetivo de tu equipo.</p>
+        <p class="swipe-hint" aria-hidden="true">Desliza para ver las 5 misiones <span>→</span></p>
+        <div class="plans" id="plans"></div>
+        <div class="plan-dots" id="planDots" aria-label="Misiones"></div>
+
+        <div class="recommender" id="recomendador">
+          <div class="rec-head">
+            <span class="pill">Recomendador</span>
+            <h3>¿No sabes cuál elegir? Responde 3 preguntas</h3>
+          </div>
+          <form class="rec-form" id="recForm" novalidate>
+            <div class="rec-q" data-q="equipo">
+              <p class="rec-label" id="q1">1. ¿Cuántas personas se van a formar?</p>
+              <div class="chips" role="radiogroup" aria-labelledby="q1">
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="solo">Solo yo</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="pequeno">De 2 a 15</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="grande">Más de 15</button>
+              </div>
+            </div>
+            <div class="rec-q" data-q="tiempo">
+              <p class="rec-label" id="q2">2. ¿Cuánto tiempo tienen disponible?</p>
+              <div class="chips" role="radiogroup" aria-labelledby="q2">
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="4">Medio día (4 h)</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="8">Un día (8 h)</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="12">Varias sesiones (12 h)</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="libre">A mi ritmo</button>
+              </div>
+            </div>
+            <div class="rec-q" data-q="objetivo">
+              <p class="rec-label" id="q3">3. ¿Qué quieren lograr?</p>
+              <div class="chips" role="radiogroup" aria-labelledby="q3">
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="explorar">Entender la IA y empezar</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="aplicar">Aplicarla en tareas del día a día</button>
+                <button type="button" class="chip" role="radio" aria-checked="false" data-v="transformar">Llevarla a los procesos de la empresa</button>
+              </div>
+            </div>
+          </form>
+          <div class="rec-result" id="recResult" aria-live="polite" hidden></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 · ¿POR QUÉ AHORA? -->
+    <section class="section" id="por-que-ahora" data-stage="Órbita">
+      <div class="halo halo-bl soft" aria-hidden="true"></div>
+      <div class="wrap">
+        <p class="phase">Fase 05 · Ventana de lanzamiento</p>
+        <h2>Cada semana sin IA aplicada cuesta <span class="hl">velocidad</span> y competitividad</h2>
+        <div class="why" id="why"></div>
+      </div>
+    </section>
+
+    <!-- 06 · CASOS DE USO (antes / después) -->
+    <section class="section" id="casos" data-stage="Aterrizaje">
+      <div class="wrap">
+        <p class="phase">Fase 06 · Aterrizaje</p>
+        <h2>Así cambia el trabajo <span class="hl">con IA</span></h2>
+        <p class="sub">Visualiza el salto concreto que tu equipo puede lograr al aplicar IA en su contexto operativo.</p>
+        <div class="tabs" role="tablist" id="caseTabs" aria-label="Perfiles"></div>
+        <div class="ba" id="ba">
+          <div class="ba-pane ba-before"><span class="ba-tag">Antes</span><p id="baBefore"></p></div>
+          <div class="ba-pane ba-after" id="baAfterPane"><span class="ba-tag ba-tag-after">Después</span><p id="baAfter"></p></div>
+          <div class="ba-handle" id="baHandle" aria-hidden="true"><span></span></div>
+          <label class="sr" for="baRange">Desliza para comparar antes y después</label>
+          <input class="ba-range" id="baRange" type="range" min="0" max="100" value="50">
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 · RESEÑAS + FAQs -->
+    <section class="section" id="resenas" data-stage="Bitácora">
+      <div class="wrap">
+        <p class="phase">Fase 07 · Bitácora de vuelo</p>
+        <h2>Historias de equipos que ya <span class="hl">despegaron</span></h2>
+        <div class="reviews" id="reviews"></div>
+      </div>
+    </section>
+
+    <section class="section" id="faqs" data-stage="Bitácora">
+      <div class="wrap narrow">
+        <h2>Preguntas <span class="hl">frecuentes</span></h2>
+        <div class="faqs" id="faqList"></div>
+      </div>
+    </section>
+
+    <!-- CTA final -->
+    <section class="section">
+      <div class="wrap">
+        <div class="cta-block">
+          <img src="assets/max-aprobando.webp" alt="" width="439" height="700" loading="lazy" decoding="async" class="cta-max">
+          <div>
+            <h2>¿Listo para el despegue?</h2>
+            <p>Inscríbete o cuéntale a un especialista qué necesita tu equipo.</p>
+            <div class="cta-row">
+              <a class="btn btn-white" data-link="inscripcion" href="#" target="_blank" rel="noopener">Inscríbete</a>
+              <a class="btn btn-ghost-light" data-link="whatsapp" href="#" target="_blank" rel="noopener">Escríbenos por WhatsApp</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-grid">
+      <img src="assets/logo-principal.webp" alt="Campuslands AI Academy" width="170" height="126" loading="lazy" decoding="async">
+      <nav aria-label="Enlaces del pie" class="footer-links" id="footerLinks"></nav>
+      <p class="footer-tagline">Transformamos la productividad de los equipos con una adopción de IA práctica, guiada y amigable.</p>
+      <p class="fine">© 2026 Campuslands AI Academy. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <!-- CTAs siempre a mano -->
+  <div class="dock" id="dock">
+    <a class="btn btn-primary" data-link="inscripcion" href="#" target="_blank" rel="noopener">Inscríbete</a>
+    <a class="btn-wa" data-link="whatsapp" href="#" target="_blank" rel="noopener" aria-label="Escríbenos por WhatsApp">
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.5l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.7 11.8 11.8 0 0 0 4.5 4c1.7.7 2.3.8 3.2.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+      <span>WhatsApp</span>
+    </a>
+  </div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>
