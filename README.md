@@ -70,3 +70,11 @@ En móvil, los planes pasan a un carrusel con desplazamiento por tarjeta e indic
 ## Uso de IA
 
 Se usó un asistente de IA como apoyo para escribir y depurar el código, extraer los recursos del manual de marca en PDF y probar la página en distintos tamaños de pantalla. El contenido sale de la landing actual y del manual de marca, y el resultado se revisó en un teléfono real antes de publicarlo.
+
+## Derechos de autor
+
+© 2026 Jonatan Sarmiento. Todos los derechos reservados.
+
+Este proyecto se entregó únicamente para evaluar mi proceso de selección en Campuslands AI Academy. Cualquier uso, copia, modificación o publicación, total o parcial, fuera de esa evaluación requiere mi autorización previa y por escrito.
+
+Los logos, la mascota Max y los contenidos de marca pertenecen a Campuslands AI Academy y se usan solo para esta propuesta.
